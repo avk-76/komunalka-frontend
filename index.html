@@ -300,6 +300,8 @@ function renderEntryForm(ap){
 }
 
 function renderDetails(){
+  hydrateFromRemoteIfEmpty();
+
   const showFormIfNeeded = ()=>{
     const ap=aptCatalog.find(a=>a.id===currentAptId);
     const key=periodKey(currentYear,currentMonth);
@@ -694,6 +696,49 @@ document.addEventListener('DOMContentLoaded', removeFilledBanner);
   // 3) Невеличкий dev-логгер (не обов’язково)
   function log(...a){ try{ console.log('[komunalka]', ...a);}catch(e){} }
 </script>
+<script>
+async function hydrateFromRemoteIfEmpty() {
+  try {
+    const ap = aptCatalog.find(a => a.id === currentAptId);
+    if (!ap) return;
+
+    const key = periodKey(currentYear, currentMonth);
+
+    // вже є локально? — нічого не робимо
+    if (dataByPeriod[key] && dataByPeriod[key][ap.id]) return;
+
+    // тягнемо з бекенду
+    const rows = await apiGetPeriodData(APT_NUM[ap.id], key);
+    if (!Array.isArray(rows) || rows.length === 0) return;
+
+    // перетворюємо у формат UI
+    const items = rows.map(r => {
+      const meta = r.meta || {};
+      const it = {
+        key:    r.item,
+        label:  meta.label || r.item,
+        kind:   meta.kind  || 'meter',
+        tariff: meta.tariff || {}
+      };
+      if (it.kind === 'meter') {
+        it.prev = r.prev_value ?? null;
+        it.curr = r.curr_value ?? null;
+      }
+      return it;
+    });
+
+    // кладемо в локальний state і перерендерюємо
+    dataByPeriod[key] = dataByPeriod[key] || {};
+    dataByPeriod[key][ap.id] = items;
+
+    try { renderAptList(); renderDetails(); } catch(_) {}
+  } catch (e) {
+    console.warn('hydrateFromRemoteIfEmpty error:', e);
+  }
+}
+</script>
+
+const APT_NUM = { "b-hmel":1, "mechnykova":2, "salak":3, "sevast":4, "hetmanska":5 };
 
 </body>
 </html>
