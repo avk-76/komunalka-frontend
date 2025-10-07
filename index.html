@@ -107,6 +107,10 @@ const $=(s,e=document)=>e.querySelector(s);
 const toUAH=n=>n.toLocaleString("uk-UA",{minimumFractionDigits:2,maximumFractionDigits:2});
 const periodKey=(y,m)=>y+"-"+String(m+1).padStart(2,"0");
 function computeItemCost(it){ if(it.kind==="fixed"||it.kind==="variable") return it.tariff.fixed||0; const used=(it.curr||0)-(it.prev||0); return Math.max(0,used)*(it.tariff.price||0); }
+<script>
+// відповідність текстових ID у фронті -> числовим ID у БД
+const APT_NUM = { "b-hmel":1, "mechnykova":2, "salak":3, "sevast":4, "hetmanska":5 };
+</script>
 
 const aptCatalog=[
   {id:"b-hmel",title:"Б. Хмельницького 8е/20"},
