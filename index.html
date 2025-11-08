@@ -152,7 +152,7 @@ let currentYear=2025;
 <!-- =========================================================
      2) API-ХЕЛПЕРИ (Render + Neon)
 ========================================================= -->
-<script>
+ <script>
   window.API_BASE = 'https://komunalka-frontend.onrender.com'; // ← твій бекенд на Render
 
   function toNum(v) {
@@ -160,12 +160,25 @@ let currentYear=2025;
     return Number.isFinite(n) ? n : null;
   }
 
+  // універсальний безпечний парсер (щоб не падати, коли бекенд повертає порожнє тіло)
+  async function parseJSONSafe(resp){
+    const ct = (resp.headers.get('content-type') || '').toLowerCase();
+    if (ct.includes('application/json')) {
+      try { return await resp.json(); } catch { return null; }
+    }
+    try {
+      const txt = await resp.text();
+      if (!txt) return null;           // 204 / empty body
+      return JSON.parse(txt);          // раптом сервер віддав текстом json
+    } catch { return null; }
+  }
+
   async function apiGetLastPeriod(apartmentId) {
     const u = new URL(window.API_BASE + '/api/period_data/last');
     u.searchParams.set('apartment_id', apartmentId);
     const r = await fetch(u);
     if (!r.ok) throw new Error('GET /last failed');
-    return r.json(); // {period: 'YYYY-MM' | null}
+    return parseJSONSafe(r); // безпечний парс
   }
 
   async function apiGetPeriodData(apartmentId, period) {
@@ -174,22 +187,28 @@ let currentYear=2025;
     u.searchParams.set('period', period);
     const r = await fetch(u);
     if (!r.ok) throw new Error('GET /period_data failed');
-    return r.json();
+    return parseJSONSafe(r); // безпечний парс
   }
 
+  // === ОНОВЛЕНО ===
   async function apiUpsert(rows) {
     const r = await fetch(window.API_BASE + '/api/period_data/upsert', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(rows || [])
     });
+
     if (!r.ok) {
       const t = await r.text().catch(()=> '');
-      throw new Error('POST /upsert failed: ' + t);
+      throw new Error(`POST /upsert failed (${r.status}): ` + t);
     }
-    return r.json(); // {updated:N}
+
+    // якщо бекенд повернув порожньо / 204 — не падаємо
+    const data = await parseJSONSafe(r);
+    return data ?? { updated: (rows?.length ?? 0) };
   }
 </script>
+
 
 <!-- =========================================================
      3) ГІДРАТАЦІЯ З БД (підтягнути, якщо локально порожньо)
