@@ -1,6 +1,10 @@
 <!doctype html>
 <html lang="uk">
 <head>
+<script>
+  window.API_BASE = "https://komunalka-api.onrender.com";
+</script>
+
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Комуналка • AVK (standalone v3)</title>
@@ -116,52 +120,6 @@ const aptCatalog=[
   {id:"hetmanska",title:"Гетьманська 50/178"},
 ];
 
-
-const aptIdMap = aptCatalog.reduce((acc, ap, idx) => { acc[ap.id] = idx + 1; return acc; }, {});
-const aptCodeById = Object.fromEntries(Object.entries(aptIdMap).map(([k, v]) => [v, k]));
-
-async function apiList() {
-  if (!window.API_BASE) return [];
-  try {
-    const r = await fetch(window.API_BASE + '/api/period_data/list');
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    return await r.json();
-  } catch (e) {
-    console.error('Не вдалося завантажити дані з API', e);
-    return [];
-  }
-}
-
-async function apiUpsert(rows) {
-  if (!window.API_BASE) return;
-  try {
-    const r = await fetch(window.API_BASE + '/api/period_data/upsert', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(rows || [])
-    });
-    if (!r.ok) {
-      const t = await r.text().catch(()=> '');
-      throw new Error('POST /upsert failed: ' + t);
-    }
-    return await r.json().catch(()=> ({}));
-  } catch (e) {
-    console.error('Не вдалося зберегти дані через API', e);
-  }
-}
-
-async function loadFromServerIntoData() {
-  const list = await apiList();
-  if (!Array.isArray(list)) return;
-  list.forEach(row => {
-    if (!row || row.apt_id == null || !row.period || !row.rows) return;
-    const code = aptCodeById[row.apt_id];
-    if (!code) return;
-    const k = row.period;
-    dataByPeriod[k] = dataByPeriod[k] || {};
-    dataByPeriod[k][code] = row.rows;
-  });
-}
 const dataByPeriod={"2025-06": {
     "b-hmel": [{"key": "light_day", "label": "🔆 Світло День", "prev": 1000, "curr": 1150, "tariff": {"unit": "кВт·год", "price": 4.32}, "kind": "meter"}, {"key": "light_night", "label": "🌙 Світло Ніч", "prev": 500, "curr": 600, "tariff": {"unit": "кВт·год", "price": 2.16}, "kind": "meter"}, {"key": "water1", "label": "💧 Вода", "prev": 62, "curr": 69, "tariff": {"unit": "м³", "price": 31.36}, "kind": "meter"}, {"key": "gas", "label": "🔥 Газ", "prev": 83, "curr": 85, "tariff": {"unit": "м³", "price": 7.89}, "kind": "meter"}, {"key": "rent", "label": "🏠 Орендна плата", "tariff": {"unit": "грн/міс", "fixed": 9000.0}, "kind": "fixed"}, {"key": "ap_water_fix", "label": "💧 АП Вода", "tariff": {"unit": "грн/міс", "fixed": 38.0}, "kind": "fixed"}, {"key": "ap_gas_fix", "label": "🔥 АП Газ", "tariff": {"unit": "грн/міс", "fixed": 3.51}, "kind": "fixed"}, {"key": "intercom", "label": "🔔 Домофон", "tariff": {"unit": "грн/міс", "fixed": 70.0}, "kind": "fixed"}, {"key": "zheu", "label": "🧾 ЖЄУ", "tariff": {"unit": "грн/міс", "fixed": 328.92}, "kind": "fixed"}, {"key": "trash", "label": "🗑️ Сміття", "tariff": {"unit": "грн/міс", "fixed": 33.57}, "kind": "fixed"}, {"key": "internet", "label": "📶 Інтернет", "tariff": {"unit": "грн/міс", "fixed": 260.0}, "kind": "fixed"}, {"key": "ap_heat", "label": "🔥 АП Опалення", "tariff": {"unit": "грн/міс", "fixed": 35.0}, "kind": "fixed"}],
     "mechnykova": [{"key": "light_day", "label": "🔆 Світло День", "prev": 17655, "curr": 17775, "tariff": {"unit": "кВт·год", "price": 4.32}, "kind": "meter"}, {"key": "light_night", "label": "🌙 Світло Ніч", "prev": 7964, "curr": 8013, "tariff": {"unit": "кВт·год", "price": 2.16}, "kind": "meter"}, {"key": "osbb", "label": "🏢 ОСББ", "tariff": {"unit": "грн/міс", "fixed": 1450.0}, "kind": "variable"}, {"key": "rent", "label": "🏠 Орендна плата", "tariff": {"unit": "грн/міс", "fixed": 19000.0}, "kind": "fixed"}, {"key": "ap_water_fix", "label": "💧 АП Вода", "tariff": {"unit": "грн/міс", "fixed": 38.0}, "kind": "fixed"}],
@@ -169,6 +127,69 @@ const dataByPeriod={"2025-06": {
     "sevast": [{"key": "light_day", "label": "🔆 Світло День", "prev": 1644, "curr": 1765, "tariff": {"unit": "кВт·год", "price": 4.32}, "kind": "meter"}, {"key": "light_night", "label": "🌙 Світло Ніч", "prev": 866, "curr": 998, "tariff": {"unit": "кВт·год", "price": 2.16}, "kind": "meter"}, {"key": "water1", "label": "💧 Вода (лічильник 1)", "prev": 384, "curr": 387, "tariff": {"unit": "м³", "price": 31.36}, "kind": "meter"}, {"key": "water2", "label": "💧 Вода (лічильник 2)", "prev": 254, "curr": 256, "tariff": {"unit": "м³", "price": 31.36}, "kind": "meter"}, {"key": "gas", "label": "🔥 Газ", "prev": 10208, "curr": 10221, "tariff": {"unit": "м³", "price": 7.89}, "kind": "meter"}, {"key": "ap_water_fix", "label": "💧 АП Вода", "tariff": {"unit": "грн/міс", "fixed": 38.0}, "kind": "fixed"}, {"key": "ap_gas_fix", "label": "🔥 АП Газ", "tariff": {"unit": "грн/міс", "fixed": 101.96}, "kind": "fixed"}],
     "hetmanska": null
   }, "2025-07": {"b-hmel": [{"key": "light_day", "label": "🔆 Світло День", "prev": 1773, "curr": 1873, "tariff": {"unit": "кВт·год", "price": 4.32}, "kind": "meter"}, {"key": "light_night", "label": "🌙 Світло Ніч", "prev": 455, "curr": 485, "tariff": {"unit": "кВт·год", "price": 2.16}, "kind": "meter"}, {"key": "water1", "label": "💧 Вода", "prev": 130, "curr": 133, "tariff": {"unit": "м³", "price": 31.36}, "kind": "meter"}, {"key": "gas", "label": "🔥 Газ", "prev": 62, "curr": 64, "tariff": {"unit": "м³", "price": 7.89}, "kind": "meter"}, {"key": "rent", "label": "🏠 Орендна плата", "tariff": {"unit": "грн/міс", "fixed": 9000.0}, "kind": "fixed"}, {"key": "ap_water_fix", "label": "💧 АП Вода", "tariff": {"unit": "грн/міс", "fixed": 38.0}, "kind": "fixed"}, {"key": "ap_gas_fix", "label": "🔥 АП Газ", "tariff": {"unit": "грн/міс", "fixed": 3.51}, "kind": "fixed"}, {"key": "intercom", "label": "🔔 Домофон", "tariff": {"unit": "грн/міс", "fixed": 70.0}, "kind": "fixed"}, {"key": "zheu", "label": "🧾 ЖЄУ", "tariff": {"unit": "грн/міс", "fixed": 328.92}, "kind": "fixed"}, {"key": "trash", "label": "🗑️ Сміття", "tariff": {"unit": "грн/міс", "fixed": 33.57}, "kind": "fixed"}, {"key": "internet", "label": "📶 Інтернет", "tariff": {"unit": "грн/міс", "fixed": 260.0}, "kind": "fixed"}, {"key": "ap_heat", "label": "🔥 АП Опалення", "tariff": {"unit": "грн/міс", "fixed": 35.0}, "kind": "fixed"}], "mechnykova": [{"key": "light_day", "label": "🔆 Світло День", "prev": 17755, "curr": 17948, "tariff": {"unit": "кВт·год", "price": 4.32}, "kind": "meter"}, {"key": "light_night", "label": "🌙 Світло Ніч", "prev": 8013, "curr": 8094, "tariff": {"unit": "кВт·год", "price": 2.16}, "kind": "meter"}, {"key": "water1", "label": "💧 Вода", "prev": 316, "curr": 319, "tariff": {"unit": "м³", "price": 31.36}, "kind": "meter"}, {"key": "osbb", "label": "🏢 ОСББ", "tariff": {"unit": "грн/міс", "fixed": 1643.0}, "kind": "variable"}, {"key": "rent", "label": "🏠 Орендна плата", "tariff": {"unit": "грн/міс", "fixed": 19000.0}, "kind": "fixed"}, {"key": "ap_water_fix", "label": "💧 АП Вода", "tariff": {"unit": "грн/міс", "fixed": 38.0}, "kind": "fixed"}], "salak": [{"key": "light_day", "label": "🔆 Світло День", "prev": 19256, "curr": 19426, "tariff": {"unit": "кВт·год", "price": 4.32}, "kind": "meter"}, {"key": "light_night", "label": "🌙 Світло Ніч", "prev": 5388, "curr": 5495, "tariff": {"unit": "кВт·год", "price": 2.16}, "kind": "meter"}, {"key": "water1", "label": "💧 Вода", "prev": 1399, "curr": 1406, "tariff": {"unit": "м³", "price": 31.36}, "kind": "meter"}, {"key": "rent", "label": "🏠 Орендна плата", "tariff": {"unit": "грн/міс", "fixed": 10500.0}, "kind": "fixed"}, {"key": "osbb", "label": "🏢 ОСББ", "tariff": {"unit": "грн/міс", "fixed": 477.08}, "kind": "fixed"}, {"key": "ap_water_fix", "label": "💧 АП Вода", "tariff": {"unit": "грн/міс", "fixed": 38.0}, "kind": "fixed"}, {"key": "ap_heat", "label": "🔥 АП Опалення", "tariff": {"unit": "грн/міс", "fixed": 27.42}, "kind": "fixed"}], "sevast": [{"key": "light_day", "label": "🔆 Світло День", "prev": 1765, "curr": 1980, "tariff": {"unit": "кВт·год", "price": 4.32}, "kind": "meter"}, {"key": "light_night", "label": "🌙 Світло Ніч", "prev": 998, "curr": 1298, "tariff": {"unit": "кВт·год", "price": 2.16}, "kind": "meter"}, {"key": "water1", "label": "💧 Вода (лічильник 1)", "prev": 387, "curr": 390, "tariff": {"unit": "м³", "price": 31.36}, "kind": "meter"}, {"key": "water2", "label": "💧 Вода (лічильник 2)", "prev": 256, "curr": 262, "tariff": {"unit": "м³", "price": 31.36}, "kind": "meter"}, {"key": "gas", "label": "🔥 Газ", "prev": 10241, "curr": 10246, "tariff": {"unit": "м³", "price": 7.89}, "kind": "meter"}, {"key": "ap_water_fix", "label": "💧 АП Вода", "tariff": {"unit": "грн/міс", "fixed": 38.0}, "kind": "fixed"}, {"key": "ap_gas_fix", "label": "🔥 АП Газ", "tariff": {"unit": "грн/міс", "fixed": 101.96}, "kind": "fixed"}], "hetmanska": [{"key": "light_day", "label": "🔆 Світло День", "prev": 9159, "curr": 9316, "tariff": {"unit": "кВт·год", "price": 4.32}, "kind": "meter"}, {"key": "light_night", "label": "🌙 Світло Ніч", "prev": 2849, "curr": 3005, "tariff": {"unit": "кВт·год", "price": 2.16}, "kind": "meter"}, {"key": "water1", "label": "💧 Вода", "prev": 1068, "curr": 1076, "tariff": {"unit": "м³", "price": 89.91}, "kind": "meter"}, {"key": "ap_water_fix", "label": "💧 АП Вода", "tariff": {"unit": "грн/міс", "fixed": 56.14}, "kind": "fixed"}, {"key": "gas", "label": "🔥 Газ", "prev": 1612, "curr": 1616, "tariff": {"unit": "м³", "price": 7.96}, "kind": "meter"}, {"key": "ap_gas_fix", "label": "🔥 АП Газ", "tariff": {"unit": "грн/міс", "fixed": 16.36}, "kind": "fixed"}, {"key": "ap_heat", "label": "🔥 АП Опалення", "tariff": {"unit": "грн/міс", "fixed": 38.8}, "kind": "fixed"}, {"key": "osbb", "label": "🏢 ОСББ", "tariff": {"unit": "грн/міс", "fixed": 209.8}, "kind": "fixed"}, {"key": "rent", "label": "🏠 Орендна плата", "tariff": {"unit": "грн/міс", "fixed": 8500.0}, "kind": "fixed"}]}};
+
+// === API integration with backend (non-breaking) ===
+window.API_BASE = window.API_BASE || "https://komunalka-api.onrender.com";
+
+async function apiList() {
+  try {
+    if (!window.API_BASE) return [];
+    const r = await fetch(window.API_BASE + '/api/period_data/list');
+    if (!r.ok) {
+      console.warn('GET /api/period_data/list failed with status', r.status);
+      return [];
+    }
+    return await r.json();
+  } catch (e) {
+    console.warn('GET /api/period_data/list error', e);
+    return [];
+  }
+}
+
+async function apiUpsert(rows) {
+  try {
+    if (!window.API_BASE) return { updated: 0 };
+    const r = await fetch(window.API_BASE + '/api/period_data/upsert', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(rows || [])
+    });
+    const text = await r.text();
+    if (!r.ok) {
+      console.warn('POST /api/period_data/upsert failed', r.status, text);
+      return { updated: 0 };
+    }
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      console.warn('POST /api/period_data/upsert invalid JSON', text);
+      return { updated: 0 };
+    }
+  } catch (e) {
+    console.warn('POST /api/period_data/upsert error', e);
+    return { updated: 0 };
+  }
+}
+
+async function loadFromServerIntoData() {
+  const rows = await apiList();
+  if (!Array.isArray(rows) || !rows.length) return;
+  rows.forEach(row => {
+    const aptIdNum = row.apt_id;
+    const period = row.period;
+    const rowData = row.rows;
+    if (!aptIdNum || !period || !rowData) return;
+    const aptIndex = aptIdNum - 1;
+    const ap = aptCatalog[aptIndex];
+    if (!ap) return;
+    const key = period;
+    dataByPeriod[key] = dataByPeriod[key] || {};
+    dataByPeriod[key][ap.id] = rowData;
+  });
+  console.log('Merged rows from server into dataByPeriod:', rows.length);
+}
+
+
 
 let currentAptId=aptCatalog[0].id;
 let currentMonth = 7; // Липень
@@ -482,9 +503,15 @@ function renderEntryForm(ap){
     dataByPeriod[k] = dataByPeriod[k] || {};
     dataByPeriod[k][ap.id] = newItems;
 
-    const aptNumericId = aptIdMap[ap.id];
-    if (aptNumericId) {
-      apiUpsert([{ apt_id: aptNumericId, period: k, rows: newItems }]);
+    // Спроба збереження на сервері (не блокує роботу, якщо є помилка)
+    try {
+      const aptIdx = aptCatalog.findIndex(a => a.id === ap.id);
+      const aptNumericId = aptIdx >= 0 ? (aptIdx + 1) : null;
+      if (aptNumericId != null) {
+        apiUpsert([{ apt_id: aptNumericId, period: k, rows: newItems }]);
+      }
+    } catch(e) {
+      console.warn('apiUpsert failed', e);
     }
 
     // Clear form and show details
@@ -579,9 +606,9 @@ function renderDetails(){
   showFormIfNeeded();
 }
 
-(async function(){
-  await loadFromServerIntoData();
+(async ()=>{
   renderAptList();
+  await loadFromServerIntoData();
   renderSelectors();
   renderDetails();
 })();
